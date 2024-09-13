@@ -1,0 +1,36 @@
+body.dark-mode {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-mode .bg-white {
+    background-color: #1e1e1e;
+}
+
+body.dark-mode .bg-gray-100 {
+    background-color: #222;
+}
+
+body.dark-mode .bg-gray-900 {
+    background-color: #0d0d0d;
+}
+
+.project-card:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease-in-out;
+}
+
+.animate__fadeIn {
+    animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* More complex animations can be added */
