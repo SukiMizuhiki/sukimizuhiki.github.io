@@ -1,58 +1,72 @@
-// Light/Dark Mode Toggle
-const themeToggle = document.getElementById('theme-toggle');
-const body = document.getElementById('main-body');
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+};
 
-themeToggle.addEventListener('click', () => {
-    body.classList.toggle('dark-mode');
-    const icon = themeToggle.querySelector('i');
-    icon.classList.toggle('fa-sun');
-    icon.classList.toggle('fa-moon');
-});
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
 
-// AJAX Form Submission
-document.getElementById('contact-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    const formData = new FormData(this);
+// Firebase services
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
 
-    fetch('https://your-backend-api-url.com/contact', {
-        method: 'POST',
-        body: formData,
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('form-response').textContent = 'Message sent successfully!';
-    })
-    .catch(error => {
-        document.getElementById('form-response').textContent = 'Error sending message.';
+// Login and Authentication
+document.getElementById('login-btn').addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then((result) => {
+        alert(`Welcome, ${result.user.displayName}`);
+    }).catch((error) => {
+        console.error('Login failed', error);
     });
 });
 
-// Project Filtering
-const projectCards = document.querySelectorAll('.project-card');
-const filterButtons = document.querySelectorAll('.filter-btn');
+// Fetch Projects from Firestore
+function fetchProjects() {
+    db.collection('projects').get().then((snapshot) => {
+        const projectGallery = document.getElementById('project-gallery');
+        projectGallery.innerHTML = ''; // Clear gallery before loading
 
-filterButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const filter = button.getAttribute('data-filter');
-        projectCards.forEach(card => {
-            if (filter === 'all' || card.getAttribute('data-category') === filter) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
+        snapshot.forEach((doc) => {
+            const project = doc.data();
+            const projectCard = document.createElement('div');
+            projectCard.classList.add('project-card', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg');
+            projectCard.innerHTML = `
+                <h3 class="text-2xl font-semibold mb-2">${project.title}</h3>
+                <p class="mb-4">${project.description}</p>
+                <a href="${project.link}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">View Project</a>
+            `;
+            projectGallery.appendChild(projectCard);
         });
     });
-});
+}
 
-// Project Search
-document.getElementById('project-search').addEventListener('input', function () {
-    const searchValue = this.value.toLowerCase();
-    projectCards.forEach(card => {
-        const projectName = card.querySelector('h3').textContent.toLowerCase();
-        if (projectName.includes(searchValue)) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
+// Fetch Blog Posts from Firestore
+function fetchBlogPosts() {
+    db.collection('blog').get().then((snapshot) => {
+        const blogPosts = document.getElementById('blog-posts');
+        blogPosts.innerHTML = ''; // Clear blog section before loading
+
+        snapshot.forEach((doc) => {
+            const post = doc.data();
+            const postCard = document.createElement('div');
+            postCard.classList.add('post-card', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg');
+            postCard.innerHTML = `
+                <h3 class="text-2xl font-semibold mb-2">${post.title}</h3>
+                <p class="mb-4">${post.content}</p>
+            `;
+            blogPosts.appendChild(postCard);
+        });
     });
+}
+
+// Fetch data on page load
+window.addEventListener('DOMContentLoaded', () => {
+    fetchProjects();
+    fetchBlogPosts();
 });
