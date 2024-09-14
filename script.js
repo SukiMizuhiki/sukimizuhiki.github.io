@@ -5,32 +5,28 @@ const firebaseConfig = {
     projectId: "YOUR_PROJECT_ID",
     storageBucket: "YOUR_STORAGE_BUCKET",
     messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID",
+    appId: "YOUR_APP_ID"
 };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
 // Firebase services
-const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
-// Login and Authentication
-document.getElementById('login-btn').addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then((result) => {
-        alert(`Welcome, ${result.user.displayName}`);
-    }).catch((error) => {
-        console.error('Login failed', error);
-    });
+// Dark Mode Toggle
+document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('bg-white');
+    document.body.classList.toggle('bg-gray-900');
+    document.body.classList.toggle('text-black');
+    document.body.classList.toggle('text-white');
 });
 
-// Fetch Projects from Firestore
+// Fetch and display projects from Firebase Firestore
 function fetchProjects() {
     db.collection('projects').get().then((snapshot) => {
         const projectGallery = document.getElementById('project-gallery');
-        projectGallery.innerHTML = ''; // Clear gallery before loading
+        projectGallery.innerHTML = ''; // Clear existing projects
 
         snapshot.forEach((doc) => {
             const project = doc.data();
@@ -43,30 +39,10 @@ function fetchProjects() {
             `;
             projectGallery.appendChild(projectCard);
         });
+    }).catch((error) => {
+        console.error('Error fetching projects:', error);
     });
 }
 
-// Fetch Blog Posts from Firestore
-function fetchBlogPosts() {
-    db.collection('blog').get().then((snapshot) => {
-        const blogPosts = document.getElementById('blog-posts');
-        blogPosts.innerHTML = ''; // Clear blog section before loading
-
-        snapshot.forEach((doc) => {
-            const post = doc.data();
-            const postCard = document.createElement('div');
-            postCard.classList.add('post-card', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg');
-            postCard.innerHTML = `
-                <h3 class="text-2xl font-semibold mb-2">${post.title}</h3>
-                <p class="mb-4">${post.content}</p>
-            `;
-            blogPosts.appendChild(postCard);
-        });
-    });
-}
-
-// Fetch data on page load
-window.addEventListener('DOMContentLoaded', () => {
-    fetchProjects();
-    fetchBlogPosts();
-});
+// Fetch projects on page load
+window.addEventListener('DOMContentLoaded', fetchProjects);
