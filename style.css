@@ -1,27 +1,36 @@
-/* General Styles */
-body {
-    font-family: 'Roboto', sans-serif;
-    transition: background-color 0.3s, color 0.3s;
+body.dark-mode {
+    background-color: #121212;
+    color: #ffffff;
 }
 
-h1, h2 {
-    text-align: center;
+body.dark-mode .bg-white {
+    background-color: #1e1e1e;
 }
 
-/* Project Card Hover Effect */
+body.dark-mode .bg-gray-100 {
+    background-color: #222;
+}
+
+body.dark-mode .bg-gray-900 {
+    background-color: #0d0d0d;
+}
+
 .project-card:hover {
     transform: scale(1.05);
     transition: transform 0.3s ease-in-out;
 }
 
-/* Dark Mode Toggle Styling */
-#dark-mode-toggle {
-    cursor: pointer;
+.animate__fadeIn {
+    animation: fadeIn 1s ease-in-out;
 }
 
-/* Responsive Layout */
-@media (max-width: 768px) {
-    .project-card {
-        margin-bottom: 20px;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
+
+/* More complex animations can be added */
