@@ -1,48 +1,58 @@
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
+// Light/Dark Mode Toggle
+const themeToggle = document.getElementById('theme-toggle');
+const body = document.getElementById('main-body');
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Firebase services
-const db = firebase.firestore();
-
-// Dark Mode Toggle
-document.getElementById('dark-mode-toggle').addEventListener('click', () => {
-    document.body.classList.toggle('bg-white');
-    document.body.classList.toggle('bg-gray-900');
-    document.body.classList.toggle('text-black');
-    document.body.classList.toggle('text-white');
+themeToggle.addEventListener('click', () => {
+    body.classList.toggle('dark-mode');
+    const icon = themeToggle.querySelector('i');
+    icon.classList.toggle('fa-sun');
+    icon.classList.toggle('fa-moon');
 });
 
-// Fetch and display projects from Firebase Firestore
-function fetchProjects() {
-    db.collection('projects').get().then((snapshot) => {
-        const projectGallery = document.getElementById('project-gallery');
-        projectGallery.innerHTML = ''; // Clear existing projects
+// AJAX Form Submission
+document.getElementById('contact-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
 
-        snapshot.forEach((doc) => {
-            const project = doc.data();
-            const projectCard = document.createElement('div');
-            projectCard.classList.add('project-card', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg');
-            projectCard.innerHTML = `
-                <h3 class="text-2xl font-semibold mb-2">${project.title}</h3>
-                <p class="mb-4">${project.description}</p>
-                <a href="${project.link}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">View Project</a>
-            `;
-            projectGallery.appendChild(projectCard);
-        });
-    }).catch((error) => {
-        console.error('Error fetching projects:', error);
+    fetch('https://your-backend-api-url.com/contact', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('form-response').textContent = 'Message sent successfully!';
+    })
+    .catch(error => {
+        document.getElementById('form-response').textContent = 'Error sending message.';
     });
-}
+});
 
-// Fetch projects on page load
-window.addEventListener('DOMContentLoaded', fetchProjects);
+// Project Filtering
+const projectCards = document.querySelectorAll('.project-card');
+const filterButtons = document.querySelectorAll('.filter-btn');
+
+filterButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const filter = button.getAttribute('data-filter');
+        projectCards.forEach(card => {
+            if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+});
+
+// Project Search
+document.getElementById('project-search').addEventListener('input', function () {
+    const searchValue = this.value.toLowerCase();
+    projectCards.forEach(card => {
+        const projectName = card.querySelector('h3').textContent.toLowerCase();
+        if (projectName.includes(searchValue)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
