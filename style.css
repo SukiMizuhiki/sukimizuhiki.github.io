@@ -1,20 +1,27 @@
+/* General Styles */
 body {
     font-family: 'Roboto', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
 }
 
-.project-card, .post-card {
-    transition: transform 0.3s ease;
-}
-
-.project-card:hover, .post-card:hover {
-    transform: scale(1.05);
-}
-
-#hero {
-    background-image: url('https://source.unsplash.com/random/1600x900?technology');
-    background-size: cover;
-    background-position: center;
-    height: 100vh;
-    color: white;
+h1, h2 {
     text-align: center;
+}
+
+/* Project Card Hover Effect */
+.project-card:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Dark Mode Toggle Styling */
+#dark-mode-toggle {
+    cursor: pointer;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+    .project-card {
+        margin-bottom: 20px;
+    }
 }
