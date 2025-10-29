@@ -1,19 +1,506 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Terminal Portfolio</title>
-  <link rel="stylesheet" href="css/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>user@portfolio:~$</title>
+    <!-- Google Font for monospace look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Nord Color Palette --- */
+        :root {
+            --nord0: #2E3440; /* Polar Night (Darkest) */
+            --nord1: #3B4252; /* Polar Night (Dark) */
+            --nord2: #434C5E; /* Polar Night (Light) */
+            --nord3: #4C566A; /* Polar Night (Lighter) */
+            --nord4: #D8DEE9; /* Snow Storm (Lightest) */
+            --nord5: #E5E9F0; /* Snow Storm (Light) */
+            --nord6: #ECEFF4; /* Snow Storm (Text) */
+            --nord7: #8FBCBB; /* Frost (Cyan/Teal) */
+            --nord8: #88C0D0; /* Frost (Light Blue) */
+            --nord9: #81A1C1; /* Frost (Blue) */
+            --nord10: #5E81AC; /* Frost (Darker Blue) */
+            --nord11: #BF616A; /* Aurora (Red) */
+            --nord12: #D08770; /* Aurora (Orange) */
+            --nord13: #EBCB8B; /* Aurora (Yellow) */
+            --nord14: #A3BE8C; /* Aurora (Green) */
+            --nord15: #B48EAD; /* Aurora (Purple) */
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--nord0);
+            color: var(--nord4);
+            font-family: 'Source Code Pro', monospace;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* Main terminal container */
+        .terminal-window {
+            width: 90%;
+            max-width: 1000px;
+            height: 80vh;
+            max-height: 700px;
+            margin: 5vh auto;
+            background-color: var(--nord1);
+            border: 1px solid var(--nord3);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Title bar */
+        .title-bar {
+            background-color: var(--nord2);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--nord3);
+        }
+
+        .title-bar-dots {
+            display: flex;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .dot.red { background-color: var(--nord11); }
+        .dot.yellow { background-color: var(--nord13); }
+        .dot.green { background-color: var(--nord14); }
+
+        .title-text {
+            color: var(--nord5);
+            margin: 0 auto;
+            transform: translateX(-24px); /* Offset for dots */
+            font-weight: 700;
+        }
+
+        /* Terminal body */
+        .terminal-body {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            /* For smooth scrolling */
+            scroll-behavior: smooth;
+        }
+
+        .terminal-body p {
+            margin: 0 0 5px 0;
+        }
+        
+        .terminal-body a {
+            color: var(--nord8);
+            text-decoration: underline;
+        }
+        
+        .terminal-body a:hover {
+            color: var(--nord7);
+            text-decoration: none;
+        }
+
+        /* Output lines */
+        .output-line {
+            white-space: pre-wrap; /* Respect newlines in content */
+            word-break: break-word;
+        }
+        
+        .output-line.success {
+            color: var(--nord14);
+        }
+
+        .output-line.error {
+            color: var(--nord11);
+        }
+        
+        .output-line.help-command {
+            color: var(--nord10);
+            font-weight: 700;
+            display: inline-block;
+            width: 100px; /* For alignment */
+        }
+        
+        .output-line.help-description {
+            color: var(--nord5);
+        }
+
+        /* Input line */
+        .input-line {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .prompt {
+            color: var(--nord7);
+            font-weight: 700;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .command-input {
+            flex-grow: 1;
+            background: none;
+            border: none;
+            color: var(--nord6);
+            font-family: inherit;
+            font-size: inherit;
+            padding: 0;
+        }
+
+        .command-input:focus {
+            outline: none;
+        }
+
+        /* Blinking cursor */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: var(--nord6);
+            margin-left: 5px;
+            animation: blink 1s steps(1) infinite;
+        }
+
+        .command-input:focus + .cursor {
+            display: none; /* Hide static cursor when focused */
+        }
+        
+        @keyframes blink {
+            0%, 50% {
+                opacity: 1;
+            }
+            50.1%, 100% {
+                opacity: 0;
+            }
+        }
+        
+        /* For mobile */
+        @media (max-width: 600px) {
+            body {
+                font-size: 14px;
+            }
+            .terminal-window {
+                width: 100%;
+                height: 100vh;
+                margin: 0;
+                border-radius: 0;
+                max-height: none;
+            }
+            .title-bar {
+                display: none; /* Simplify for mobile */
+            }
+        }
+
+    </style>
 </head>
 <body>
-  <div id="terminal">
-    <pre id="output"></pre>
-    <div class="input-line">
-      <span class="prompt">&gt; </span>
-      <input type="text" id="input" autofocus autocomplete="off" />
+
+    <div class="terminal-window">
+        <!-- Title Bar -->
+        <div class="title-bar">
+            <div class="title-bar-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+            </div>
+            <div class="title-text">user@portfolio: ~</div>
+        </div>
+
+        <!-- Terminal Body -->
+        <div class="terminal-body" id="terminal-body">
+            <!-- Welcome message will be typed here -->
+            <div id="welcome-message"></div>
+            
+            <!-- This is where command lines will be added -->
+            <div class="input-line" id="initial-input-line">
+                <span class="prompt">user@portfolio:~$</span>
+                <input type="text" class="command-input" id="command-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
+                <span class="cursor"></span>
+            </div>
+        </div>
     </div>
-  </div>
-  <script src="js/script.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const terminalBody = document.getElementById('terminal-body');
+            const welcomeContainer = document.getElementById('welcome-message');
+            const initialInputLine = document.getElementById('initial-input-line');
+            let currentInput = document.getElementById('command-input');
+
+            // --- CONTENT TO EDIT ---
+            // Edit the content inside these backticks (`) to personalize your portfolio.
+            // You can use \n for new lines.
+
+            const welcomeMessage = `Welcome to my portfolio!
+System login successful.
+Type 'help' to see the list of available commands.`;
+
+            const aboutContent = `
+Hello! I'm [Your Name].
+I'm a [Your Role, e.g., "Full-Stack Developer", "Student", "Designer"] based in [Your Location].
+I am passionate about [Your Passion, e.g., "building beautiful web applications", "data science", "open-source"].
+This terminal is built with vanilla HTML, CSS, and JavaScript, using the Nord color scheme.
+`;
+
+            const projectsContent = `
+Here are some of my projects. You can also use 'ls' to see related files.
+
+[Project 1 Name] - <a href="[Your Project URL]" target="_blank">[Your Project URL]</a>
+  - [Short description of your project.]
+
+[Project 2 Name] - <a href="[Your Project URL]" target="_blank">[Your Project URL]</a>
+  - [Short description of your project.]
+  
+[Project 3 Name] - [No Link? Just a description]
+  - [Short description of your project.]
+`;
+
+            const contactContent = `
+You can reach me here:
+  Email:    <a href="mailto:[your-email@example.com]">[your-email@example.com]</a>
+  GitHub:   <a href="https://github.com/[your-username]" target="_blank">[your-username]</a>
+  LinkedIn: <a href="https://linkedin.com/in/[your-profile]" target="_blank">[your-profile]</a>
+`;
+
+            const helpContent = `
+Available commands:
+
+  <span class="output-line help-command">help</span>     <span class="output-line help-description">Show this help message.</span>
+  <span class="output-line help-command">about</span>    <span class="output-line help-description">Display my 'About Me' info.</span>
+  <span class="output-line help-command">projects</span> <span class="output-line help-description">List my recent projects.</span>
+  <span class="output-line help-command">contact</span>  <span class="output-line help-description">Show my contact details.</span>
+  <span class="output-line help-command">ls</span>       <span class="output-line help-description">List files in this directory.</span>
+  <span class="output-line help-command">cat [file]</span> <span class="output-line help-description">Display content of a file (e.g., 'cat about.txt').</span>
+  <span class="output-line help-command">clear</span>    <span class="output-line help-description">Clear the terminal screen.</span>
+`;
+
+            const lsContent = `
+total 3
+-rw-r--r-- 1 user user 248 Oct 29 14:30 about.txt
+-rw-r--r-- 1 user user 412 Oct 29 14:30 projects.txt
+-rw-r--r-- 1 user user 180 Oct 29 14:30 contact.txt
+`;
+            // --- END OF CONTENT TO EDIT ---
+
+
+            const commands = {
+                'help': helpContent,
+                'about': aboutContent,
+                'projects': projectsContent,
+                'contact': contactContent,
+                'ls': lsContent,
+                'cat': (args) => {
+                    if (args.length === 0) {
+                        return "Usage: cat [file]"; // Return a string
+                    }
+                    switch (args[0]) {
+                        case 'about.txt':
+                            return aboutContent;
+                        case 'projects.txt':
+                            return projectsContent;
+                        case 'contact.txt':
+                            return contactContent;
+                        default:
+                            return `cat: ${args[0]}: No such file or directory`; // Return a string
+                    }
+                },
+                'clear': () => {
+                    // Clear all children except the welcome message container (which will be cleared)
+                    // and the new input line we are about to add.
+                    welcomeContainer.innerHTML = ''; // Clear welcome message
+                    
+                    // Remove all old output and input lines
+                    const oldLines = terminalBody.querySelectorAll('.output-line, .input-line:not(#initial-input-line)');
+                    oldLines.forEach(line => line.remove());
+                    
+                    // We must also clear the welcome message text that was typed out
+                    const welcomeText = terminalBody.querySelectorAll('.typed-output');
+                     welcomeText.forEach(line => line.remove());
+
+                    return ''; // No output
+                }
+            };
+
+            // --- Functions ---
+            
+            function createOutputLine(text, type = "") {
+                const div = document.createElement('div');
+                div.classList.add('output-line');
+                if (type) {
+                    div.classList.add(type);
+                }
+                // This is safer than innerHTML for user-generated content,
+                // but for our predefined content with HTML, we need innerHTML.
+                // We'll trust our predefined content.
+                div.innerHTML = text; 
+                return div;
+            }
+
+            function processCommand(commandStr) {
+                const parts = commandStr.split(' ').filter(part => part.length > 0);
+                const command = parts[0];
+                const args = parts.slice(1);
+                
+                if (!command) {
+                    return;
+                }
+
+                if (command in commands) {
+                    const output = commands[command];
+                    if (typeof output === 'function') {
+                        const result = output(args);
+                        if (result) {
+                            // Check if the string result is an error message
+                            const isError = result.startsWith("Usage:") || result.startsWith("cat:");
+                            terminalBody.appendChild(createOutputLine(result, isError ? "error" : ""));
+                        }
+                    } else {
+                        terminalBody.appendChild(createOutputLine(output));
+                    }
+                } else {
+                    terminalBody.appendChild(createOutputLine(`command not found: ${command}`, 'error'));
+                }
+            }
+
+            function createNewLine() {
+                // Create the new input line structure
+                const newLine = document.createElement('div');
+                newLine.classList.add('input-line');
+                
+                newLine.innerHTML = `
+                    <span class="prompt">user@portfolio:~$</span>
+                    <input type="text" class="command-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    <span class="cursor"></span>
+                `;
+                
+                terminalBody.appendChild(newLine);
+                
+                // Get the new input element and focus it
+                currentInput = newLine.querySelector('.command-input');
+                currentInput.focus();
+                
+                // Add the event listener to the new input
+                currentInput.addEventListener('keydown', handleKeydown);
+            }
+
+            function handleKeydown(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    
+                    const commandStr = currentInput.value.trim();
+                    
+                    // Disable current input and remove listener
+                    currentInput.disabled = true;
+                    currentInput.removeEventListener('keydown', handleKeydown);
+
+                    // Create a static version of the entered command
+                    const staticLine = document.createElement('div');
+                    staticLine.classList.add('output-line');
+                    // Sanitize command string to prevent HTML injection from user input
+                    const escapedCommand = commandStr.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    staticLine.innerHTML = `<span class="prompt">user@portfolio:~$</span> ${escapedCommand}`;
+                    
+                    // Replace the input line with the static version
+                    currentInput.parentElement.replaceWith(staticLine);
+
+                    // Process the command
+                    processCommand(commandStr);
+                    
+                    // Create a new input line
+                    createNewLine();
+                    
+                    // Scroll to bottom
+                    terminalBody.scrollTop = terminalBody.scrollHeight;
+                }
+            }
+
+            // Type out the welcome message
+            function typeMessage(element, message, index = 0) {
+                if (index < message.length) {
+                    // Handle newlines
+                    if (message.substring(index, index + 1) === '\n') {
+                        element.innerHTML += '<br>';
+                    } else {
+                        element.innerHTML += message[index];
+                    }
+                    
+                    terminalBody.scrollTop = terminalBody.scrollHeight; // Keep scrolled to bottom
+                    
+                    setTimeout(() => typeMessage(element, message, index + 1), 10);
+                } else {
+                    // After typing, move the initial input line to be *after* the welcome message
+                    // This is a bit of a hack, but it ensures the welcome message appears "above" the first prompt
+                    
+                    // Create a new div to hold the typed message
+                    const typedOutput = document.createElement('div');
+                    typedOutput.classList.add('output-line', 'typed-output');
+                    typedOutput.innerHTML = element.innerHTML;
+                    
+                    // Insert the typed output *before* the initial input line
+                    terminalBody.insertBefore(typedOutput, initialInputLine);
+                    
+                    // Clear the original welcome container
+                    element.innerHTML = '';
+                    if (element.parentElement) {
+                        element.remove(); // Remove the temporary container
+                    }
+                    
+                    // Focus the initial input
+                    if(currentInput) {
+                        currentInput.focus();
+                    }
+                }
+            }
+
+            // --- Event Listeners ---
+            
+            // Initial keydown listener
+            if(currentInput) {
+                currentInput.addEventListener('keydown', handleKeydown);
+            }
+
+            // Click anywhere in the terminal to focus the input
+            terminalBody.addEventListener('click', (e) => {
+                // Don't re-focus if user is selecting text
+                if (window.getSelection().toString() === '') {
+                    // Check if the click was on the input itself
+                    if (e.target.classList.contains('command-input')) {
+                        return;
+                    }
+                    if(currentInput) {
+                        currentInput.focus();
+                    }
+                }
+            });
+
+            // Start the welcome message
+            if (welcomeContainer) {
+                typeMessage(welcomeContainer, welcomeMessage);
+            } else {
+                // Fallback if welcome container is not found (should not happen)
+                console.error("Welcome container not found.");
+                if(currentInput) {
+                    currentInput.focus();
+                }
+            }
+        });
+    </script>
+
 </body>
 </html>
+
