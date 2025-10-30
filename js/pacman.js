@@ -1,396 +1,752 @@
-//board
-let board;
-const rowCount = 21;
-const columnCount = 19;
-const tileSize = 32;
-const boardWidth = columnCount*tileSize;
-const boardHeight = rowCount*tileSize;
-let context;
+const canvas = document.querySelector('canvas')
+const c = canvas.getContext('2d')
 
-let blueGhostImage;
-let orangeGhostImage;
-let pinkGhostImage;
-let redGhostImage;
-let pacmanUpImage;
-let pacmanDownImage;
-let pacmanLeftImage;
-let pacmanRightImage;
-let wallImage;
+const scoreEl = document.querySelector('#scoreEl')
 
-//X = wall, O = skip, P = pac man, ' ' = food
-//Ghosts: b = blue, o = orange, p = pink, r = red
-const tileMap = [
-    "XXXXXXXXXXXXXXXXXXX",
-    "X        X        X",
-    "X XX XXX X XXX XX X",
-    "X                 X",
-    "X XX X XXXXX X XX X",
-    "X    X       X    X",
-    "XXXX XXXX XXXX XXXX",
-    "OOOX X       X XOOO",
-    "XXXX X XXrXX X XXXX",
-    "O       bpo       O",
-    "XXXX X XXXXX X XXXX",
-    "OOOX X       X XOOO",
-    "XXXX X XXXXX X XXXX",
-    "X        X        X",
-    "X XX XXX X XXX XX X",
-    "X  X     P     X  X",
-    "XX X X XXXXX X X XX",
-    "X    X   X   X    X",
-    "X XXXXXX X XXXXXX X",
-    "X                 X",
-    "XXXXXXXXXXXXXXXXXXX"
-];
+const mapWidth = 11; // Number of columns in the map
+const mapHeight = 13; // Number of rows in the map
+canvas.width = mapWidth * Boundary.width;
+canvas.height = mapHeight * Boundary.height;
 
-const walls = new Set();
-const foods = new Set();
-const ghosts = new Set();
-let pacman;
-
-const directions = ['U', 'D', 'L', 'R']; //up down left right
-let score = 0;
-let lives = 3;
-let gameOver = false;
-
-// Image loading variables
-let blueGhostImage, orangeGhostImage, pinkGhostImage, redGhostImage;
-let pacmanUpImage, pacmanDownImage, pacmanLeftImage, pacmanRightImage;
-let wallImage;
-
-window.onload = function() {
-    board = document.getElementById("board");
-    if (!board) {
-        console.error("Canvas element with ID 'board' not found.");
-        return;
+class Boundary {
+    static width = 40
+    static height = 40
+    constructor({ position, image }) {
+        this.position = position
+        this.width = 40
+        this.height = 40
+        this.image = image
     }
-    board.height = boardHeight;
-    board.width = boardWidth;
-    context = board.getContext("2d"); //used for drawing on the board
 
-    // Start the game only after all images are loaded
-    loadImages().then(() => {
-        initializeGame();
-    }).catch(error => {
-        console.error("Error loading images:", error);
-    });
-}
+    draw() {
+        // c.fillStyle = 'blue'
+        // c.fillRect(this.position.x, this.position.y, this.width, this.height)
 
-function loadImage(src) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
-    });
-}
-
-async function loadImages() {
-    try {
-        [
-            wallImage,
-            blueGhostImage,
-            orangeGhostImage,
-            pinkGhostImage,
-            redGhostImage,
-            pacmanUpImage,
-            pacmanDownImage,
-            pacmanLeftImage,
-            pacmanRightImage
-        ] = await Promise.all([
-            loadImage("./wall.png"),
-            loadImage("./blueGhost.png"),
-            loadImage("./orangeGhost.png"),
-            loadImage("./pinkGhost.png"),
-            loadImage("./redGhost.png"),
-            loadImage("./pacmanUp.png"),
-            loadImage("./pacmanDown.png"),
-            loadImage("./pacmanLeft.png"),
-            loadImage("./pacmanRight.png")
-        ]);
-    } catch (error) {
-        console.error("One or more images failed to load.", error);
-        // Handle image loading failure, e.g., show an error message.
-        throw error;
+        c.drawImage(this.image, this.position.x, this.position.y)
     }
 }
 
-function initializeGame() {
-    loadMap();
-    for (let ghost of ghosts.values()) {
-        const newDirection = directions[Math.floor(Math.random() * 4)];
-        ghost.updateDirection(newDirection);
+class Player {
+    constructor({
+        position,
+        velocity
+    }) {
+        this.position = position
+        this.velocity = velocity
+        this.radius = 15
+        this.radians = 0.75
+        this.openRate = 0.09
+        this.rotation = 0
     }
-    document.addEventListener("keyup", movePacman);
-    // Start the game loop
-    requestAnimationFrame(update);
+
+    draw() {
+        c.save()
+        c.translate(this.position.x, this.position.y)
+        c.rotate(this.rotation)
+        c.translate(-this.position.x, -this.position.y)
+        c.beginPath()
+        c.arc(this.position.x, this.position.y, this.radius, this.radians, Math.
+PI * 2 - this.radians)
+        c.lineTo(this.position.x, this.position.y)
+        c.fillStyle = 'yellow'
+        c.fill()
+        c.closePath()
+        c.restore()
+    }
+
+    update() {
+        this.draw()
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+
+        if (this.radians < 0 || this.radians > 0.75) {
+            this.openRate = -this.openRate
+        }
+
+        this.radians += this.openRate
+    }
 }
 
-function loadMap() {
-    walls.clear();
-    foods.clear();
-    ghosts.clear();
-    score = 0; // Reset score when loading a map
+class Ghost {
+    static speed = 2
+    constructor({
+        position,
+        velocity,
+        color = 'red'
+    }) {
+        this.position = position
+        this.velocity = velocity
+        this.radius = 15
+        this.color = color
+        this.prevCollisions = []
+        this.speed = 2
+        this.scared = false
+    }
 
-    for (let r = 0; r < rowCount; r++) {
-        for (let c = 0; c < columnCount; c++) {
-            const row = tileMap[r];
-            const tileMapChar = row[c];
-            const x = c * tileSize;
-            const y = r * tileSize;
+    draw() {
+        c.beginPath()
+        c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
+        c.fillStyle = this.scared ? 'blue' : this.color
+        c.fill()
+        c.closePath()
+    }
 
-            if (tileMapChar == 'X') {
-                const wall = new Block(wallImage, x, y, tileSize, tileSize);
-                walls.add(wall);
-            } else if (tileMapChar == 'b') {
-                const ghost = new Block(blueGhostImage, x, y, tileSize, tileSize);
-                ghosts.add(ghost);
-            } else if (tileMapChar == 'o') {
-                const ghost = new Block(orangeGhostImage, x, y, tileSize, tileSize);
-                ghosts.add(ghost);
-            } else if (tileMapChar == 'p') {
-                const ghost = new Block(pinkGhostImage, x, y, tileSize, tileSize);
-                ghosts.add(ghost);
-            } else if (tileMapChar == 'r') {
-                const ghost = new Block(redGhostImage, x, y, tileSize, tileSize);
-                ghosts.add(ghost);
-            } else if (tileMapChar == 'P') {
-                pacman = new Block(pacmanRightImage, x, y, tileSize, tileSize);
-            } else if (tileMapChar == ' ') {
-                const food = new Block(null, x + 14, y + 14, 4, 4);
-                foods.add(food);
+    update() {
+        this.draw()
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+    }
+}
+
+class Pellet {
+    constructor({ position }) {
+        this.position = position
+        this.radius = 3
+    }
+
+    draw() {
+        c.beginPath()
+        c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
+        c.fillStyle = 'white'
+        c.fill()
+        c.closePath()
+    }
+}
+
+class PowerUp {
+    constructor({ position }) {
+        this.position = position
+        this.radius = 8
+    }
+
+    draw() {
+        c.beginPath()
+        c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
+        c.fillStyle = 'white'
+        c.fill()
+        c.closePath()
+    }
+}
+
+
+const pellets = []
+const boundaries = []
+const powerUps = []
+const ghosts = [
+    new Ghost({
+        position: {
+            x: Boundary.width * 6 + Boundary.width / 2,
+            y: Boundary.height + Boundary.height / 2
+        },
+        velocity: {
+            x: Ghost.speed,
+            y: 0
+        }
+    }),
+    new Ghost({
+        position: {
+            x: Boundary.width * 6 + Boundary.width / 2,
+            y: Boundary.height * 3 + Boundary.height / 2
+        },
+        velocity: {
+            x: Ghost.speed,
+            y: 0
+        },
+        color: 'pink'
+    })
+
+]
+
+const player = new Player({
+    position: {
+        x: Boundary.width + Boundary.width / 2,
+        y: Boundary.height + Boundary.height / 2
+    },
+    velocity: {
+        x: 0,
+        y: 0
+    }
+})
+
+const keys = {
+    w: {
+        pressed: false
+    },
+    a: {
+        pressed: false
+    },
+    s: {
+        pressed: false
+    },
+    d: {
+        pressed: false
+    }
+}
+
+let lastKey = ''
+
+let score = 0
+
+const map = [
+    ['1', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2'],
+    ['|', '.', '.', '.', '.', '.', '.', '.', '.', '.', '|'],
+    ['|', '.', 'b', '.', '[', '7', ']', '.', 'b', '.', '|'],
+    ['|', '.', '.', '.', '.', '_', '.', '.', '.', '.', '|'],
+    ['|', '.', '[', ']', '.', '.', '.', '[', ']', '.', '|'],
+    ['|', '.', '.', '.', '.', '^', '.', '.', '.', '.', '|'],
+    ['|', '.', 'b', '.', '[', '+', ']', '.', 'b', '.', '|'],
+    ['|', '.', '.', '.', '.', '_', '.', '.', '.', '.', '|'],
+    ['|', '.', '[', ']', '.', '.', '.', '[', ']', '.', '|'],
+    ['|', '.', '.', '.', '.', '^', '.', '.', '.', '.', '|'],
+    ['|', '.', 'b', '.', '[', '5', ']', '.', 'b', '.', '|'],
+    ['|', '.', '.', '.', '.', '.', '.', '.', '.', 'p', '|'],
+    ['4', '-', '-', '-', '-', '-', '-', '-', '-', '-', '3']
+]
+
+function createImage(src) {
+    const image = new Image()
+    image.src = src
+    return image
+}
+
+map.forEach((row, i) => {
+    row.forEach((symbol, j) => {
+        switch (symbol) {
+            case '-':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/pipeHorizontal.png')
+                    })
+                )
+                break
+            case '|':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/pipeVertical.png')
+                    })
+                )
+                break
+            case '1':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/pipeCorner1.png')
+                    })
+                )
+                break
+            case '2':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/pipeCorner2.png')
+                    })
+                )
+                break
+            case '3':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/pipeCorner3.png')
+                    })
+                )
+                break
+            case '4':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/pipeCorner4.png')
+                    })
+                )
+                break
+            case 'b':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: Boundary.width * j,
+                            y: Boundary.height * i
+                        },
+                        image: createImage('./images/block.png')
+                    })
+                )
+                break
+            case '[':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        image: createImage('./images/capLeft.png')
+                    })
+                )
+                break
+            case ']':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        image: createImage('./images/capRight.png')
+                    })
+                )
+                break
+            case '_':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        image: createImage('./images/capBottom.png')
+                    })
+                )
+                break
+            case '^':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        image: createImage('./images/capTop.png')
+                    })
+                )
+                break
+            case '+':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        image: createImage('./images/pipeCross.png')
+                    })
+                )
+                break
+            case '5':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        color: 'blue',
+                        image: createImage('./images/pipeConnectorTop.png')
+                    })
+                )
+                break
+            case '6':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        color: 'blue',
+                        image: createImage('./images/pipeConnectorRight.png')
+                    })
+                )
+                break
+            case '7':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        color: 'blue',
+                        image: createImage('./images/pipeConnectorBottom.png')
+                    })
+                )
+                break
+            case '8':
+                boundaries.push(
+                    new Boundary({
+                        position: {
+                            x: j * Boundary.width,
+                            y: i * Boundary.height
+                        },
+                        image: createImage('./images/pipeConnectorLeft.png')
+                    })
+                )
+                break
+            case '.':
+                pellets.push(
+                    new Pellet({
+                        position: {
+                            x: j * Boundary.width + Boundary.width / 2,
+                            y: i * Boundary.height + Boundary.height / 2
+                        }
+                    })
+                )
+                break
+            case 'p':
+                powerUps.push(
+                    new PowerUp({
+                        position: {
+                            x: j * Boundary.width + Boundary.width / 2,
+                            y: i * Boundary.height + Boundary.height / 2
+                        }
+                    })
+                )
+                break
+        }
+    })
+})
+
+function circleCollidesWithRectangle({ circle, rectangle }) {
+    const padding = Boundary.width / 2 - circle.radius - 1
+
+    return (circle.position.y - circle.radius + circle.velocity.y <= rectangle.p
+osition.y + rectangle.height + padding && circle.position.x + circle.radius + ci
+rcle.velocity.x >= rectangle.position.x - padding && circle.position.y + circle.
+radius + circle.velocity.y >= rectangle.position.y - padding && circle.position.
+x - circle.radius + circle.velocity.x <= rectangle.position.x + rectangle.width
++ padding)
+}
+
+let animationId
+
+function animate() {
+    animationId = window.requestAnimationFrame(animate)
+    c.clearRect(0, 0, canvas.width, canvas.height)
+
+    if (keys.w.pressed && lastKey === 'w') {
+        for (let i = 0; i < boundaries.length; i++) {
+            const boundary = boundaries[i]
+            if (circleCollidesWithRectangle({
+                circle: {
+                    ...player, velocity: {
+                        x: 0,
+                        y: -5
+                    }
+                },
+                rectangle: boundary
+            })) {
+                player.velocity.y = 0
+                break
+            } else {
+                player.velocity.y = -5
+            }
+        }
+
+    } else if (keys.a.pressed && lastKey === 'a') {
+        for (let i = 0; i < boundaries.length; i++) {
+            const boundary = boundaries[i]
+            if (circleCollidesWithRectangle({
+                circle: {
+                    ...player, velocity: {
+                        x: -5,
+                        y: 0
+                    }
+                },
+                rectangle: boundary
+            })) {
+                player.velocity.x = 0
+                break
+            } else {
+                player.velocity.x = -5
+            }
+        }
+    } else if (keys.s.pressed && lastKey === 's') {
+        for (let i = 0; i < boundaries.length; i++) {
+            const boundary = boundaries[i]
+            if (circleCollidesWithRectangle({
+                circle: {
+                    ...player, velocity: {
+                        x: 0,
+                        y: 5
+                    }
+                },
+                rectangle: boundary
+            })) {
+                player.velocity.y = 0
+                break
+            } else {
+                player.velocity.y = 5
+            }
+        }
+    } else if (keys.d.pressed && lastKey === 'd') {
+        for (let i = 0; i < boundaries.length; i++) {
+            const boundary = boundaries[i]
+            if (circleCollidesWithRectangle({
+                circle: {
+                    ...player, velocity: {
+                        x: 5,
+                        y: 0
+                    }
+                },
+                rectangle: boundary
+            })) {
+                player.velocity.x = 0
+                break
+            } else {
+                player.velocity.x = 5
             }
         }
     }
-}
 
-function update() {
-    if (gameOver) {
-        // Handle game over screen or logic
-        drawGameOver();
-        return;
-    }
-    move();
-    draw();
-    requestAnimationFrame(update); // Use requestAnimationFrame for smoother animation
-}
+    // Detect collision between ghosts and player
+    for (let i = ghosts.length - 1; 0 <= i; i--) {
+        const ghost = ghosts[i]
+        // Ghost touches player
+        if (Math.hypot(ghost.position.x - player.position.x, ghost.position.y -
+player.position.y)
+            < ghost.radius + player.radius
 
-function draw() {
-    context.clearRect(0, 0, board.width, board.height);
-
-    // Draw walls
-    for (let wall of walls.values()) {
-        context.drawImage(wall.image, wall.x, wall.y, wall.width, wall.height);
-    }
-
-    // Draw foods
-    context.fillStyle = "white";
-    for (let food of foods.values()) {
-        context.fillRect(food.x, food.y, food.width, food.height);
-    }
-
-    // Draw ghosts
-    for (let ghost of ghosts.values()) {
-        context.drawImage(ghost.image, ghost.x, ghost.y, ghost.width, ghost.height);
-    }
-
-    // Draw Pac-Man
-    if (pacman) {
-        context.drawImage(pacman.image, pacman.x, pacman.y, pacman.width, pacman.height);
-    }
-
-    // Draw score and lives
-    context.fillStyle = "white";
-    context.font = "20px sans-serif";
-    context.fillText("Score: " + String(score), 10, 20);
-    context.fillText("Lives: " + String(lives), board.width - 80, 20);
-}
-
-function drawGameOver() {
-    context.fillStyle = "rgba(0, 0, 0, 0.7)";
-    context.fillRect(0, 0, board.width, board.height);
-    context.fillStyle = "white";
-    context.font = "40px sans-serif";
-    context.textAlign = "center";
-    context.fillText("Game Over", board.width / 2, board.height / 2 - 20);
-    context.font = "20px sans-serif";
-    context.fillText("Press any key to restart", board.width / 2, board.height / 2 + 20);
-}
-
-function move() {
-    if (!pacman) return;
-
-    pacman.x += pacman.velocityX;
-    pacman.y += pacman.velocityY;
-
-    for (let wall of walls.values()) {
-        if (collision(pacman, wall)) {
-            pacman.x -= pacman.velocityX;
-            pacman.y -= pacman.velocityY;
-            break;
-        }
-    }
-
-    let foodEaten = null;
-    for (let food of foods.values()) {
-        if (collision(pacman, food)) {
-            foodEaten = food;
-            score += 10;
-            break;
-        }
-    }
-    if (foodEaten) {
-        foods.delete(foodEaten);
-    }
-
-    if (foods.size == 0) {
-        // Next level logic or win condition
-        gameOver = true; // For simplicity, end game.
-    }
-
-    for (let ghost of ghosts.values()) {
-        if (collision(ghost, pacman)) {
-            lives -= 1;
-            if (lives <= 0) {
-                gameOver = true;
-                return;
-            }
-            resetPositions();
-            break; // Exit loop after one collision
-        }
-
-        moveGhost(ghost);
-    }
-}
-
-function moveGhost(ghost) {
-    // A simple random movement AI for ghosts
-    if (Math.random() < 0.02) { // 2% chance to change direction
-        const newDirection = directions[Math.floor(Math.random() * 4)];
-        ghost.updateDirection(newDirection);
-    }
-
-    ghost.x += ghost.velocityX;
-    ghost.y += ghost.velocityY;
-
-    for (let wall of walls.values()) {
-        if (collision(ghost, wall)) {
-            ghost.x -= ghost.velocityX;
-            ghost.y -= ghost.velocityY;
-            const newDirection = directions[Math.floor(Math.random() * 4)];
-            ghost.updateDirection(newDirection);
-            break;
-        }
-    }
-}
-
-function movePacman(e) {
-    if (gameOver) {
-        // Restart the game on any key press
-        gameOver = false;
-        lives = 3;
-        initializeGame();
-        return;
-    }
-
-    let newDirection = null;
-    if (e.code == "ArrowUp" || e.code == "KeyW") {
-        newDirection = 'U';
-    } else if (e.code == "ArrowDown" || e.code == "KeyS") {
-        newDirection = 'D';
-    } else if (e.code == "ArrowLeft" || e.code == "KeyA") {
-        newDirection = 'L';
-    } else if (e.code == "ArrowRight" || e.code == "KeyD") {
-        newDirection = 'R';
-    }
-
-    if (newDirection && pacman) {
-        pacman.updateDirection(newDirection);
-        // Update Pac-Man image based on direction
-        if (pacman.direction == 'U') pacman.image = pacmanUpImage;
-        else if (pacman.direction == 'D') pacman.image = pacmanDownImage;
-        else if (pacman.direction == 'L') pacman.image = pacmanLeftImage;
-        else if (pacman.direction == 'R') pacman.image = pacmanRightImage;
-    }
-}
-
-function collision(a, b) {
-    return a.x < b.x + b.width &&
-           a.x + a.width > b.x &&
-           a.y < b.y + b.height &&
-           a.y + a.height > b.y;
-}
-
-function resetPositions() {
-    if (pacman) {
-        pacman.reset();
-        pacman.velocityX = 0;
-        pacman.velocityY = 0;
-    }
-    for (let ghost of ghosts.values()) {
-        ghost.reset();
-        const newDirection = directions[Math.floor(Math.random() * 4)];
-        ghost.updateDirection(newDirection);
-    }
-}
-
-class Block {
-    constructor(image, x, y, width, height) {
-        this.image = image;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-
-        this.startX = x;
-        this.startY = y;
-
-        this.direction = 'R';
-        this.velocityX = 0;
-        this.velocityY = 0;
-        this.speed = tileSize / 8; // Pac-Man and Ghost speed
-    }
-
-    updateDirection(direction) {
-        const lastDirection = this.direction;
-        this.direction = direction;
-        this.updateVelocity();
-        // A simple check to prevent getting stuck
-        let testX = this.x + this.velocityX;
-        let testY = this.y + this.velocityY;
-        let collisionDetected = false;
-        for (let wall of walls.values()) {
-            // Create a temporary block for collision check
-            let tempBlock = {x: testX, y: testY, width: this.width, height: this.height};
-            if (collision(tempBlock, wall)) {
-                collisionDetected = true;
-                break;
+        ) {
+            if (ghost.scared) {
+                ghosts.splice(i, 1)
+            } else {
+                cancelAnimationFrame(animationId)
             }
         }
-        if (collisionDetected) {
-            this.direction = lastDirection;
-            this.updateVelocity();
+    }
+
+    // Win condition
+    if (pellets.length === 0) {
+        console.log('You win')
+        cancelAnimationFrame(animationId)
+    }
+
+
+    // Power ups
+    for (let i = powerUps.length - 1; 0 <= i; i--) {
+        const powerUp = powerUps[i]
+        powerUp.draw()
+        // Where player collides with powerup
+        if (
+            Math.hypot(
+                powerUp.position.x - player.position.x,
+                powerUp.position.y - player.position.y
+            ) < powerUp.radius + player.radius
+        ) {
+            powerUps.splice(i, 1)
+
+            // Make ghosts scared
+            ghosts.forEach(ghost => {
+                ghost.scared = true
+
+                setTimeout(() => {
+                    ghost.scared = false
+                }, 5000)
+            })
         }
     }
 
-    updateVelocity() {
-        this.velocityX = 0;
-        this.velocityY = 0;
-        if (this.direction == 'U') {
-            this.velocityY = -this.speed;
-        } else if (this.direction == 'D') {
-            this.velocityY = this.speed;
-        } else if (this.direction == 'L') {
-            this.velocityX = -this.speed;
-        } else if (this.direction == 'R') {
-            this.velocityX = this.speed;
+
+    // Pellet collision
+    for (let i = pellets.length - 1; 0 <= i; i--) {
+        const pellet = pellets[i]
+        pellet.draw()
+
+        if (Math.hypot(pellet.position.x - player.position.x, pellet.position.y
+- player.position.y) < pellet.radius + player.radius) {
+            pellets.splice(i, 1)
+            score += 10
+            scoreEl.innerHTML = score
         }
     }
 
-    reset() {
-        this.x = this.startX;
-        this.y = this.startY;
-        this.direction = 'R';
-        this.updateVelocity();
+
+    boundaries.forEach((boundary) => {
+        boundary.draw()
+
+        if (circleCollidesWithRectangle({
+            circle: player,
+            rectangle: boundary
+        })) {
+            player.velocity.x = 0
+            player.velocity.y = 0
+        }
+    })
+
+    player.update()
+
+    // Ghosts
+    ghosts.forEach((ghost) => {
+        ghost.update()
+
+
+        const collisions = []
+
+        boundaries.forEach(boundary => {
+            if (
+                !collisions.includes('right') &&
+                circleCollidesWithRectangle({
+                    circle: {
+                        ...ghost, velocity: {
+                            x: ghost.speed,
+                            y: 0
+                        }
+                    },
+                    rectangle: boundary
+                })) {
+                collisions.push('right')
+            }
+
+            if (
+                !collisions.includes('left') &&
+                circleCollidesWithRectangle({
+                    circle: {
+                        ...ghost, velocity: {
+                            x: -ghost.speed,
+                            y: 0
+                        }
+                    },
+                    rectangle: boundary
+                })) {
+                collisions.push('left')
+            }
+
+            if (
+                !collisions.includes('up') &&
+                circleCollidesWithRectangle({
+                    circle: {
+                        ...ghost, velocity: {
+                            x: 0,
+                            y: -ghost.speed
+                        }
+                    },
+                    rectangle: boundary
+                })) {
+                collisions.push('up')
+            }
+
+            if (
+                !collisions.includes('down') &&
+                circleCollidesWithRectangle({
+                    circle: {
+                        ...ghost, velocity: {
+                            x: 0,
+                            y: ghost.speed
+                        }
+                    },
+                    rectangle: boundary
+                })) {
+                collisions.push('down')
+            }
+
+        })
+        if (collisions.length > ghost.prevCollisions.length) ghost.prevCollision
+s = collisions
+
+        if (JSON.stringify(collisions) !== JSON.stringify(ghost.prevCollisions))
+ {
+            if (ghost.velocity.x > 0) {
+                ghost.prevCollisions.push('right')
+            }
+            else if (ghost.velocity.x < 0) {
+                ghost.prevCollisions.push('left')
+            }
+            else if (ghost.velocity.y < 0) {
+                ghost.prevCollisions.push('up')
+            }
+            else if (ghost.velocity.y > 0) {
+                ghost.prevCollisions.push('down')
+            }
+
+            const pathways = ghost.prevCollisions.filter(collision => {
+                return !collisions.includes(collision)
+            })
+
+            const direction = pathways[Math.floor(Math.random() * pathways.lengt
+h)]
+
+            switch (direction) {
+                case 'down':
+                    ghost.velocity.y = ghost.speed
+                    ghost.velocity.x = 0
+                    break
+                case 'up':
+                    ghost.velocity.y = -ghost.speed
+                    ghost.velocity.x = 0
+                    break
+                case 'right':
+                    ghost.velocity.y = 0
+                    ghost.velocity.x = ghost.speed
+                    break
+                case 'left':
+                    ghost.velocity.y = 0
+                    ghost.velocity.x = -ghost.speed
+                    break
+            }
+
+            ghost.prevCollisions = []
+        }
+    })
+
+    // Player rotation
+    if (player.velocity.x > 0) {
+        player.rotation = 0
+    } else if (player.velocity.x < 0) {
+        player.rotation = Math.PI
+    } else if (player.velocity.y > 0) {
+        player.rotation = Math.PI / 2
+    } else if (player.velocity.y < 0) {
+        player.rotation = Math.PI * 1.5
     }
-};
+
+
+} // End of animate()
+
+animate()
+
+window.addEventListener('keydown', ({ key }) => {
+    switch (key) {
+        case 'w':
+            keys.w.pressed = true
+            lastKey = 'w'
+            break
+        case 'a':
+            keys.a.pressed = true
+            lastKey = 'a'
+            break
+        case 's':
+            keys.s.pressed = true
+            lastKey = 's'
+            break
+        case 'd':
+            keys.d.pressed = true
+            lastKey = 'd'
+            break
+    }
+})
+
+window.addEventListener('keyup', ({ key }) => {
+    switch (key) {
+        case 'w':
+            keys.w.pressed = false
+            break
+        case 'a':
+            keys.a.pressed = false
+            break
+        case 's':
+            keys.s.pressed = false
+            break
+        case 'd':
+            keys.d.pressed = false
+            break
+    }
+})

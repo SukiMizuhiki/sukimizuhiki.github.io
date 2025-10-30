@@ -208,13 +208,23 @@
 
         /* Pac-Man styles */
         #pacman-container {
+            position: relative;
             margin-bottom: 15px;
-            /* Center the canvas */
-            display: flex;
-            justify-content: center;
         }
-        #board {
+        #pacman-container canvas {
             background-color: black;
+            display: block; /* Removes bottom space under canvas */
+            margin: 0 auto; /* Center the canvas */
+        }
+        #scoreEl {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 1.5em;
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard */
         }
     </style>
 </head>
@@ -237,7 +247,11 @@
             <div id="welcome-message"></div>
 
             <div id="pacman-container" style="display: none;">
-                <canvas id="board"></canvas>
+                <div>
+                    <span style="color: white; -webkit-user-select: none; -ms-user-select: none; user-select: none;">Score: </span>
+                    <span id="scoreEl" style="color: white; -webkit-user-select: none; -ms-user-select: none; user-select: none;">0</span>
+                </div>
+                <canvas></canvas>
             </div>
             
             <!-- This is where command lines will be added -->
