@@ -208,123 +208,13 @@
 
         /* Pac-Man styles */
         #pacman-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .game-container {
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-evenly;
-          align-items: center;
-        }
-        .grid {
-          display: flex;
-          flex-wrap: wrap;
-          width: 560px;
-          height: 560px;
-          border: 0.2px solid rgb(1, 17, 17);
-        }
-        .grid div {
-          width: 20px;
-          height: 20px;
-        }
-        .power-pellet {
-          background-color: rgb(14, 233, 14);
-          border: solid black 4px;
-          box-sizing: border-box;
-          border-radius: 10px;
-        }
-        .pac-dot {
-          background-color: yellow;
-          border: solid black 7px;
-          box-sizing: border-box;
-          border-radius: 10px;
-        }
-        .blinky {
-          background-color: red;
-        }
-        .stinky {
-          background-color: rgb(221, 18, 130);
-        }
-        .inky {
-          background-color: rgb(15, 214, 204);
-        }
-        .clyde {
-          background-color: rgb(243, 125, 78);
-        }
-        .ghost {
-          border: 0px;
-          border-radius: 0px;
-        }
-        .scared-ghost {
-          background-color: purple;
-          border: 0px;
-          border-radius: 0px;
-        }
-        .wall {
-          background-color: rgb(8, 14, 102);
-        }
-        .pac-man {
-          background-color: rgb(247, 232, 22);
-          border-radius: 10px;
-        }
-        #pacman-container h2 {
-          color: white;
-          font-weight: normal;
-          text-align: center;
-        }
-        .low-score {
-          color: red;
-        }
-        .mid-score {
-          color: yellow;
-        }
-        .high-score {
-          color: red;
-        }
-        .overlay-screen {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
+            margin-bottom: 15px;
+            /* Center the canvas */
             display: flex;
             justify-content: center;
-            align-items: center;
-            background-color: rgba(0,0,0,0.8);
-            color: white;
-            font-size: 2em;
         }
-        #start-screen {
-          flex-direction: column;
-        }
-        #start-screen h1 {
-          color: yellow;
-          font-size: 4rem;
-          margin-bottom: 40px;
-          animation: colours 1s infinite;
-        }
-        #start-msg {
-          animation: blink 0.8s infinite;
-        }
-        #start-screen h2 {
-          margin: 20px 0px;
-        }
-        #game-over-screen, #you-won-screen {
-            display: none;
-            font-size: 6rem;
-            animation: blink 0.8s infinite;
-        }
-        #game-over-screen {
-            color: red;
-        }
-        #you-won-screen {
-            color: #0bf117;
+        #board {
+            background-color: black;
         }
     </style>
 </head>
@@ -347,21 +237,7 @@
             <div id="welcome-message"></div>
 
             <div id="pacman-container" style="display: none;">
-                <div class="overlay-screen" id="start-screen">
-                    <h1>PACMAN</h1>
-                    <h2 id="start-msg">Press ENTER to start</h2>
-                    <h2>Use arrow keys to move</h2>
-                </div>
-                <div class="game-container">
-                    <div class="grid"></div>
-                    <h2>Score:<span id="score">0</span></h2>
-                </div>
-                <div class="overlay-screen" id="game-over-screen">
-                    <span>GAME OVER!</span>
-                </div>
-                <div class="overlay-screen" id="you-won-screen">
-                    <span>YOU WON!</span>
-                </div>
+                <canvas id="board"></canvas>
             </div>
             
             <!-- This is where command lines will be added -->
